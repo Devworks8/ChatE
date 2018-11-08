@@ -1,0 +1,2 @@
+# ChatE
+Encrypted chat client.
