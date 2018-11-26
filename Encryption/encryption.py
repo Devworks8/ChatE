@@ -12,4 +12,6 @@ class Encrypt:
     """
     All encryption and validation functionality is handled by the Encrypt class.
     """
-    pass
+
+    def __init__(self):
+        pass

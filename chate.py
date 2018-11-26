@@ -24,4 +24,3 @@ if __name__ == '__main__':
     master.title('Chat Encryption')
     chatE = ChatE(master)
     chatE.run()
-    
