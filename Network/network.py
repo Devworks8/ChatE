@@ -2,116 +2,99 @@
 All network related work is located and handled here.
 
 File Name: network.py
-File Version: 0.1.0
-Updated: 26/11/2018
+File Version: 0.2.0
+Updated: 27/11/2018
 """
 
-import socket
-import select
-import sys
-from threading import *
+from socket import AF_INET, socket, SOCK_STREAM
+from threading import Thread
 
 from Encryption.encryption import Encrypt
 from Parser.parser import Config
 
 
-# TODO: Implement Server Class
-class Server(Encrypt, Config):
+class Server(Encrypt):
     """
     All hosting functionality is handled by the Server class.
     """
 
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.ip_address = Config.host
-        self.port = Config.port
+        self.config = config
+        self.ip_address = ""
+        self.port = config.port
+        self.clients = {}
+        self.addresses = {}
+        self.server = None
+
+    def accept_incoming_connections(self):
+        """
+        Sets up handling for incoming clients.
+        :return:
+        """
+        while True:
+            client, client_address = self.server.accept()
+            print("%s:%s has connected." % client_address)
+            client.send(bytes("Welcome to the Cave! Press enter to use the default alias; %s, or enter a new alias." % self.config.alias, self.config.encoding))
+            self.addresses[client] = client_address
+            Thread(target=self.handle_client, args=(client,)).start()
+
+    def handle_client(self, client):
+        """
+        Handles a single client connection.
+        :param client: socket
+        :return:
+        """
+
+        name = client.recv(self.config.buff_size).decode(self.config.encoding)
+        client.send(bytes(self.config.welcome, self.config.encoding))
+        msg = "%s has joined the chat!" % name
+        self.broadcast(bytes(msg, self.config.encoding))
+        self.clients[client] = name
+        while True:
+            msg = client.recv(self.config.buff_size)
+            if msg != bytes("{quit}", self.config.encoding):
+                self.broadcast(msg, name + ": ")
+            else:
+                client.send(bytes("{quit}", self.config.encoding))
+                client.close()
+                del self.clients[client]
+                self.broadcast(bytes("%s has left the chat." % name, self.config.encoding))
+                break
+
+    def broadcast(self, msg, prefix=""):
+        """
+        Broadcasts a message to all the clients.
+        :param msg: message string
+        :return:
+        """
+
+        for sock in self.clients:
+            sock.send(bytes(prefix, self.config.encoding) + msg)
+
+    def run(self, kill=False):
+        self.ip_address = self.config.host
+        self.port = self.config.port
+        self.server = socket(AF_INET, SOCK_STREAM)
         self.server.bind((self.ip_address, self.port))
-        self.server.listen(Config.active_Connections)
-        self.list_of_clients = []
-
-    def clientthread(self, conn, addr):
-        """
-        Client Handler
-
-        :param conn: Socket Object
-        :param addr: IP Address
-        :return: None
-        """
-        # Send a welcome message to new connections.
-        conn.send(Config.welcome)
-
-        while True:
-            try:
-                message = conn.recv(2048)
-                if message:
-                    # Print the message
-                    print("->" ) + message
-
-                else:
-                    # Remove the connection if broken.
-                    self.remove(conn)
-
-            except:
-                continue
-
-    def broadcast(self, message, connection):
-        """
-        Broadcast the message to all clients who's object is not the same of the one sending the message.
-
-        :param message: Message sent
-        :param connection: Socket Object
-        :return: None
-        """
-        for clients in self.list_of_clients:
-            if clients != connection:
-                try:
-                    clients.send(message)
-                except:
-                    clients.close()
-
-                    # If the link is broken, remove the client
-                    self.remove(clients)
-
-    def remove(self, connection):
-        """
-        Removes the object from the list that was created at the beginning.
-        :param connection: Socket Object
-        :return: None
-        """
-
-        if connection in self.list_of_clients:
-            self.list_of_clients.remove(connection)
-
-    def state(self, run=True):
-        while True:
-            """
-            Accept a connection request and stores two parameters, 
-            conn, which is a socket object for that user, 
-            and addr which contains the IP address of the client that just connected.
-            """
-
-            conn, addr = self.server.accept()
-
-            """
-            Maintain a list of clients for ease of broadcasting a message to all available people in the chatroom.
-            """
-
-            self.list_of_clients.append(conn)
-
-            # Create an individual thread for every user that connects.
-            start_new_thread(clientthread, (conn, addr))
-
-        conn.close()
+        self.server.listen(self.config.max_connections)
+        print("Waiting for connection...")
+        ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+        ACCEPT_THREAD.start()
+        ACCEPT_THREAD.join()
         self.server.close()
 
 
 # TODO: Implement Client Class
-class Client(Encrypt):
+class Client(Encrypt, Config):
     """
     All client functionality is handled by the Client class.
     """
 
-    pass
+    def __init__(self):
+        Encrypt.__init__()
+        Config.__init__()
+
+
+
 

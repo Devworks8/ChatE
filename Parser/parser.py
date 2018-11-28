@@ -2,8 +2,8 @@
 All parsing related work is located and handled here.
 
 File Name: parser.py
-File Version: 0.0.1
-Updated: 26/11/2018
+File Version: 0.0.2
+Updated: 27/11/2018
 """
 
 
@@ -14,8 +14,11 @@ class Config:
     """
 
     def __init__(self):
+        super().__init__()
         self.host = '127.0.0.1'
         self.port = 1060
-        self.active_Connections = 100
-        self.welcome = 'Welcome to the Cave'
-        self.recv_size = 2048
+        self.max_connections = 100
+        self.welcome = 'Welcome to the Cave! Type {quit} to exit.'
+        self.buff_size = 1024
+        self.encoding = "utf8"
+        self.alias = "Krunk"

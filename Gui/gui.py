@@ -2,73 +2,91 @@
 All gui related work is located and handled here.
 
 File Name: gui.py
-File Version: 0.0.1
-Updated: 26/11/2018
+File Version: 0.1.0
+Updated: 27/11/2018
 """
 
+from socket import AF_INET, socket, SOCK_STREAM
+from threading import Thread
 import tkinter as tk
-import tkinter.ttk as ttk
 
-UPDATE_RATE = 1000
+from Parser.parser import Config
 
 
 class Gui:
-    def __init__(self, master):
-        self.master = master
-        self.gui = None
-        self.create(master)
-        self.updater()
+    def __init__(self, frame, config):
+        self.config = config
+        self._my_msg = None
+        self._msg_list = None
+        self._messages_frame = None
+        self._scrollbar = None
+        self._entry_field = None
+        self._send_button = None
+        self.receive_thread = None
+        self.client_socket = None
+        self.top = frame
 
-    def updater(self):
-        self.master.after(UPDATE_RATE, self.updater)
+    def receive(self):
+        """Handles receiving of messages."""
+        while True:
+            try:
+                msg = self.client_socket.recv(self.config.buff_size).decode(self.config.encoding)
+                self._msg_list.insert(tk.END, msg)
+            except OSError:  # Possibly client has left the chat.
+                break
 
-    def bringtoFront(self, root):
-        root.attributes("-topmost", True)
-        root.focus_force()
+    def send(self, event=None):  # event is passed by binders.
+        """Handles sending of messages."""
+        msg = self._my_msg.get()
+        self._my_msg.set("")  # Clears input field.
+        self.client_socket.send(bytes(msg, self.config.encoding))
+        if msg == "{quit}":
+            self.client_socket.close()
+            self.top.quit()
 
-    def create(self, root):
-        """
-        Declare and position all widgets.
-        :return: None
-        """
-        frame = VerticalScrolledFrame(root)
-        frame.pack()
-        self.gui = frame.interior
-        """
-        Create Menu
-        """
-        menuBar = tk.Menu(root)
-        fileMenu = tk.Menu(menuBar, tearoff=0)
-        fileMenu.add_command(label="New Session", command=lambda: self.data.newProject(self.master,
-                                                                                       frame.interior,
-                                                                                       self.config,
-                                                                                       self.data))
-        fileMenu.add_command(label="Open Session", command=lambda: self.data.load(self.master, frame.interior,
-                                                                                  settings=self.config,
-                                                                                  project=True))
-        fileMenu.add_command(label="Close Session", command=None)
-        fileMenu.add_separator()
-        fileMenu.add_command(label="Settings", command=lambda: self.data.dataMap(frame.interior, new=True))
-        fileMenu.add_separator()
-        fileMenu.add_command(label="Quit", command=root.quit)
+    def on_closing(self, event=None):
+        """This function is to be called when the window is closed."""
+        self._my_msg.set("{quit}")
+        self.send()
 
-        menuBar.add_cascade(label="File", menu=fileMenu)
+    def load(self):
+        self.top.title("Chat Encryption")
 
-        root.config(menu=menuBar)
+        self._messages_frame = tk.Frame(self.top)
+        self._my_msg = tk.StringVar()  # For the messages to be sent.
+        self._my_msg.set("Type your messages here.")
+        self._scrollbar = tk.Scrollbar(self._messages_frame)  # To navigate through past messages.
+        # Following will contain the messages.
+        self._msg_list = tk.Listbox(self._messages_frame, height=15, width=50, yscrollcommand=self._scrollbar.set)
+        self._scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self._msg_list.pack(side=tk.LEFT, fill=tk.BOTH)
+        self._msg_list.pack()
+        self._messages_frame.pack()
 
-        """
-        Create Status Bar
-        """
-        statusBar = tk.Label(root, text="Ready", bd=3, relief=tk.RIDGE)
-        statusBar.pack(side=tk.BOTTOM, fill=tk.X, expand=tk.TRUE)
+        self._entry_field = tk.Entry(self.top, textvariable=self._my_msg)
+        self._entry_field.bind("<Return>", self.send)
+        self._entry_field.pack()
+        self._send_button = tk.Button(self.top, text="Send", command=self.send)
+        self._send_button.pack()
 
-        """
-        Prepare canvas.
-        """
-        frame1 = tk.Frame(frame.interior, padx=10, pady=10)
-        frame1.pack()
-        frame1 = ttk.Notebook(root)
-        frame1.pack()
+        self.top.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        #----Now comes the sockets part----
+        HOST = input('Enter host: ')
+        PORT = input('Enter port: ')
+        if not PORT:
+            PORT = self.config.port
+        else:
+            PORT = int(PORT)
+
+        ADDR = (HOST, PORT)
+
+        self.client_socket = socket(AF_INET, SOCK_STREAM)
+        self.client_socket.connect(ADDR)
+
+        self.receive_thread = Thread(target=self.receive)
+        self.receive_thread.start()
+        tk.mainloop()  # Starts GUI execution.
 
 
 # FIXME: Crashes when used in the macOS environment.
