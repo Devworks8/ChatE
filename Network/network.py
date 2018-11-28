@@ -1,25 +1,21 @@
 """
-All network related work is located and handled here.
+All server related work is located and handled here.
 
 File Name: network.py
-File Version: 0.2.0
-Updated: 27/11/2018
+File Version: 0.3.0
+Updated: 28/11/2018
 """
 
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 
-from Encryption.encryption import Encrypt
-from Parser.parser import Config
 
-
-class Server(Encrypt):
+class Server:
     """
     All hosting functionality is handled by the Server class.
     """
 
     def __init__(self, config):
-        super().__init__()
         self.config = config
         self.ip_address = ""
         self.port = config.port
@@ -35,7 +31,8 @@ class Server(Encrypt):
         while True:
             client, client_address = self.server.accept()
             print("%s:%s has connected." % client_address)
-            client.send(bytes("Welcome to the Cave! Press enter to use the default alias; %s, or enter a new alias." % self.config.alias, self.config.encoding))
+            client.send(bytes("Welcome to the Cave!", self.config.encoding))
+            client.send(bytes("Enter alias.", self.config.encoding))
             self.addresses[client] = client_address
             Thread(target=self.handle_client, args=(client,)).start()
 
@@ -83,17 +80,6 @@ class Server(Encrypt):
         ACCEPT_THREAD.start()
         ACCEPT_THREAD.join()
         self.server.close()
-
-
-# TODO: Implement Client Class
-class Client(Encrypt, Config):
-    """
-    All client functionality is handled by the Client class.
-    """
-
-    def __init__(self):
-        Encrypt.__init__()
-        Config.__init__()
 
 
 

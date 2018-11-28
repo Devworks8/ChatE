@@ -72,6 +72,7 @@ class Gui:
         self.top.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         #----Now comes the sockets part----
+        
         HOST = input('Enter host: ')
         PORT = input('Enter port: ')
         if not PORT:
