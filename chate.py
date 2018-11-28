@@ -3,8 +3,8 @@ ChatE is a chat client/server that encrypts all messages and sent. Only those wh
 have the ability to read the message.
 
 File Name: chate.py
-File Version: 0.0.2
-Updated: 27/11/2018
+File Version: 0.1.2
+Updated: 28/11/2018
 """
 
 from tkinter import Toplevel as tkToplevel
@@ -13,23 +13,24 @@ from Parser import parser
 from Gui import gui
 from Network import network
 
+__VERSION__ = "0.0.2"
+
 
 class ChatE:
-    def __init__(self, master):
+    def __init__(self):
         self.config = parser.Config()
-        self.gui = gui.Gui(master, self.config)
+        self.client = gui.Client(self.config)
 
     def run(self, server=False):
         if not server:
-
-            self.gui.load()
+            pass
+            self.client.load(__VERSION__)
         else:
             server = network.Server(self.config)
             server.run()
 
 
 if __name__ == '__main__':
-    master = tkToplevel()
-    chatE = ChatE(master)
+    chatE = ChatE()
     #chatE.run(server=True)
     chatE.run(server=False)

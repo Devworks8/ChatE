@@ -2,29 +2,29 @@
 All gui related work is located and handled here.
 
 File Name: gui.py
-File Version: 0.1.0
-Updated: 27/11/2018
+File Version: 0.1.1
+Updated: 28/11/2018
 """
 
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 import tkinter as tk
 
-from Parser.parser import Config
 
-
-class Gui:
-    def __init__(self, frame, config):
+class Client:
+    def __init__(self, config):
         self.config = config
         self._my_msg = None
         self._msg_list = None
         self._messages_frame = None
+        self._user_frame = None
+        self._btm_frame = None
         self._scrollbar = None
         self._entry_field = None
         self._send_button = None
         self.receive_thread = None
         self.client_socket = None
-        self.top = frame
+        self.top = None
 
     def receive(self):
         """Handles receiving of messages."""
@@ -49,12 +49,24 @@ class Gui:
         self._my_msg.set("{quit}")
         self.send()
 
-    def load(self):
-        self.top.title("Chat Encryption")
+    def load(self, version):
+        self.top = tk.Tk()
+        self.top.title("Encrypted Chat - Version %s" % version)
+        self.top.geometry("600x800")
 
-        self._messages_frame = tk.Frame(self.top)
-        self._my_msg = tk.StringVar()  # For the messages to be sent.
+        # FIXME: Need to finish structuring the gui.
+        self._messages_frame = tk.Frame(self.top, bg='black', width=450, height=500, pady=3, padx=3)
+        self._user_frame = tk.Frame(self.top, bg='black', width=150, height=500, pady=3, padx=3)
+        self._btm_frame = tk.Frame(self.top, bg='black', width=600, height=100, pady=3, padx=3)
+        self.top.grid_rowconfigure(1, weight=1)
+        self.top.grid_columnconfigure(1, weight=1)
+        self._messages_frame.grid(row=0, column=0, sticky="nw")
+        self._user_frame.grid(row=0, column=1, sticky="ne")
+        self._btm_frame.grid(row=1, sticky='ew')
+
+        self._my_msg = tk.StringVar(self._btm_frame)  # For the messages to be sent.
         self._my_msg.set("Type your messages here.")
+
         self._scrollbar = tk.Scrollbar(self._messages_frame)  # To navigate through past messages.
         # Following will contain the messages.
         self._msg_list = tk.Listbox(self._messages_frame, height=15, width=50, yscrollcommand=self._scrollbar.set)
@@ -72,7 +84,7 @@ class Gui:
         self.top.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         #----Now comes the sockets part----
-        
+        """
         HOST = input('Enter host: ')
         PORT = input('Enter port: ')
         if not PORT:
@@ -87,8 +99,13 @@ class Gui:
 
         self.receive_thread = Thread(target=self.receive)
         self.receive_thread.start()
+        """
         tk.mainloop()  # Starts GUI execution.
 
+
+# TODO: Implement settings window.
+class Settings:
+    pass
 
 # FIXME: Crashes when used in the macOS environment.
 class VerticalScrolledFrame(tk.Frame):
