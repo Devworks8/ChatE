@@ -2,8 +2,8 @@
 All gui related work is located and handled here.
 
 File Name: gui.py
-File Version: 0.1.1
-Updated: 28/11/2018
+File Version: 0.2.1
+Updated: 1/12/2018
 """
 
 from socket import AF_INET, socket, SOCK_STREAM
@@ -16,10 +16,10 @@ class Client:
         self.config = config
         self._my_msg = None
         self._msg_list = None
+        self._usr_list = None
         self._messages_frame = None
         self._user_frame = None
         self._btm_frame = None
-        self._scrollbar = None
         self._entry_field = None
         self._send_button = None
         self.receive_thread = None
@@ -51,40 +51,57 @@ class Client:
 
     def load(self, version):
         self.top = tk.Tk()
+        self.top.configure(bg='black')
         self.top.title("Encrypted Chat - Version %s" % version)
-        self.top.geometry("600x800")
+        self.top.geometry('600x800')
 
         # FIXME: Need to finish structuring the gui.
-        self._messages_frame = tk.Frame(self.top, bg='black', width=450, height=500, pady=3, padx=3)
-        self._user_frame = tk.Frame(self.top, bg='black', width=150, height=500, pady=3, padx=3)
-        self._btm_frame = tk.Frame(self.top, bg='black', width=600, height=100, pady=3, padx=3)
-        self.top.grid_rowconfigure(1, weight=1)
-        self.top.grid_columnconfigure(1, weight=1)
-        self._messages_frame.grid(row=0, column=0, sticky="nw")
-        self._user_frame.grid(row=0, column=1, sticky="ne")
-        self._btm_frame.grid(row=1, sticky='ew')
+        # Setup the window
+        self.top.grid_columnconfigure(0, weight=3)
+        self.top.grid_rowconfigure(1, weight=3)
 
-        self._my_msg = tk.StringVar(self._btm_frame)  # For the messages to be sent.
+        # Create labels
+        lbl1 = tk.Label(self.top, text="Chat", bg="black", fg="white")
+        lbl2 = tk.Label(self.top, text="Users", bg="black", fg="white")
+        lbl1.grid(row=0, column=0, sticky="w")
+        lbl2.grid(row=0, column=1, sticky="w")
+
+        # Create Message frame
+        self._messages_frame = tk.Frame(self.top, bg="black", relief=tk.SUNKEN)
+        self._messages_frame.grid_rowconfigure(1, weight=20)
+        self._messages_frame.grid_columnconfigure(0, weight=3)
+        self._messages_frame.grid(column=0, row=1, sticky="nsew")
+        _msg_scrollbar = tk.Scrollbar(self._messages_frame, orient="vertical", bg="black")  # To navigate through past messages.
+        _msg_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self._msg_list = tk.Listbox(self._messages_frame, yscrollcommand=_msg_scrollbar.set, bd=2, bg="black", fg="white")
+        self._msg_list.pack(expand=True, fill=tk.BOTH)
+        _msg_scrollbar.config(command=self._msg_list.yview)
+
+        # Create User frame
+        self._user_frame = tk.Frame(self.top, bg="black", relief=tk.SUNKEN)
+        self._messages_frame.grid_rowconfigure(1, weight=8)
+        self._user_frame.grid(column=1, row=1, sticky="nsew")
+        _usr_scrollbar = tk.Scrollbar(self._user_frame, orient="vertical", bg="black")  # To navigate through users.
+        _usr_scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
+        self._usr_list = tk.Listbox(self._user_frame, yscrollcommand=_usr_scrollbar.set, bd=2, bg="black", fg="white")
+        self._usr_list.pack(expand=True, fill=tk.Y)
+        _usr_scrollbar.config(command=self._usr_list.yview)
+
+        # Create variable to store user input
+        self._my_msg = tk.StringVar(self._messages_frame)  # For the messages to be sent.
         self._my_msg.set("Type your messages here.")
 
-        self._scrollbar = tk.Scrollbar(self._messages_frame)  # To navigate through past messages.
-        # Following will contain the messages.
-        self._msg_list = tk.Listbox(self._messages_frame, height=15, width=50, yscrollcommand=self._scrollbar.set)
-        self._scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self._msg_list.pack(side=tk.LEFT, fill=tk.BOTH)
-        self._msg_list.pack()
-        self._messages_frame.pack()
-
-        self._entry_field = tk.Entry(self.top, textvariable=self._my_msg)
+        # Create input field, and send button.
+        self._entry_field = tk.Entry(self.top, textvariable=self._my_msg, width=300, bg="black", fg="white")
         self._entry_field.bind("<Return>", self.send)
-        self._entry_field.pack()
-        self._send_button = tk.Button(self.top, text="Send", command=self.send)
-        self._send_button.pack()
+        self._entry_field.grid(column=0, row=2)
+        self._send_button = tk.Button(self.top, text="Send", command=self.send, bg="black", fg="white")
+        self._send_button.grid(column=1, row=2)
 
         self.top.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         #----Now comes the sockets part----
-        """
+
         HOST = input('Enter host: ')
         PORT = input('Enter port: ')
         if not PORT:
@@ -99,60 +116,10 @@ class Client:
 
         self.receive_thread = Thread(target=self.receive)
         self.receive_thread.start()
-        """
-        tk.mainloop()  # Starts GUI execution.
+
+        self.top.mainloop()  # Starts GUI execution.
 
 
 # TODO: Implement settings window.
 class Settings:
     pass
-
-# FIXME: Crashes when used in the macOS environment.
-class VerticalScrolledFrame(tk.Frame):
-    """A pure Tkinter scrollable frame that actually works!
-    * Use the 'interior' attribute to place widgets inside the scrollable frame
-    * Construct and pack/place/grid normally
-    * This frame only allows vertical scrolling
-    * Code fetched from https://gist.github.com/EugeneBakin/76c8f9bcec5b390e45df
-    """
-    def __init__(self, parent, *args, **kw):
-        tk.Frame.__init__(self, parent, *args, **kw)
-
-        # create a canvas object and a vertical scrollbar for scrolling it
-        vscrollbar = tk.Scrollbar(self, orient=tk.VERTICAL)
-        vscrollbar.pack(fill=tk.Y, side=tk.RIGHT, expand=tk.FALSE)
-        canvas = tk.Canvas(self, scrollregion=(0, 0, 800, 600), width=800, height=600, bd=0, highlightthickness=0,
-                        yscrollcommand=vscrollbar.set)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.TRUE)
-        vscrollbar.config(command=canvas.yview)
-
-        # reset the view
-        canvas.xview_moveto(0)
-        canvas.yview_moveto(0)
-
-        # create a frame inside the canvas which will be scrolled with it
-        self.interior = interior = tk.Frame(canvas)
-        interior_id = canvas.create_window(0, 0, window=interior,
-                                           anchor=tk.NW)
-
-        # track changes to the canvas and frame width and sync them,
-        # also updating the scrollbar
-        def _configure_interior(event):
-            # update the scrollbars to match the size of the inner frame
-            size = (interior.winfo_reqwidth(), interior.winfo_reqheight())
-            canvas.config(scrollregion="0 0 %s %s" % size)
-            if interior.winfo_reqwidth() != canvas.winfo_width():
-                # update the canvas's width to fit the inner frame
-                canvas.config(width=interior.winfo_reqwidth())
-        interior.bind('<Configure>', _configure_interior)
-
-        def _configure_canvas(event):
-            if interior.winfo_reqwidth() != canvas.winfo_width():
-                # update the inner frame's width to fill the canvas
-                canvas.itemconfigure(interior_id, width=canvas.winfo_width())
-        canvas.bind('<Configure>', _configure_canvas)
-
-        def _on_mousewheel(event):
-            canvas.yview_scroll(-1 * event.delta, 'units')
-
-        #canvas.bind_all('<MouseWheel>', _on_mousewheel)
