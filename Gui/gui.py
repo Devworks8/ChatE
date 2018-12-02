@@ -10,6 +10,8 @@ from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 import tkinter as tk
 
+from Network import network
+
 
 class Client:
     def __init__(self, config):
@@ -25,6 +27,8 @@ class Client:
         self.receive_thread = None
         self.client_socket = None
         self.top = None
+        self.srvrunning = False
+        self.server = None
 
     def receive(self):
         """Handles receiving of messages."""
@@ -55,6 +59,25 @@ class Client:
         self.top.title("Encrypted Chat - Version %s" % version)
         self.top.geometry('600x800')
 
+        # Setup menu
+        menubar = tk.Menu(self.top)
+        filemenu = tk.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="New Connection", command=lambda: self.client())
+        filemenu.add_command(label="Close Connection", command=None)
+        filemenu.add_separator()
+        filemenu.add_command(label="Settings", command=None)
+        filemenu.add_separator()
+        filemenu.add_command(label="Quit", command=lambda: self.on_closing())
+        menubar.add_cascade(label="File", menu=filemenu)
+
+        servermenu = tk.Menu(menubar, tearoff=0)
+        servermenu.add_command(label="Start", command=lambda: self.servercmd("start"))
+        servermenu.add_command(label="Restart", command=lambda: self.servercmd("restart"))
+        servermenu.add_command(label="Stop", command=lambda: self.servercmd("stop"))
+        menubar.add_cascade(label="Server", menu=servermenu)
+
+        self.top.config(menu=menubar)
+
         # FIXME: Need to finish structuring the gui.
         # Setup the window
         self.top.grid_columnconfigure(0, weight=3)
@@ -79,7 +102,7 @@ class Client:
 
         # Create User frame
         self._user_frame = tk.Frame(self.top, bg="black", relief=tk.SUNKEN)
-        self._messages_frame.grid_rowconfigure(1, weight=8)
+        self._user_frame.grid_rowconfigure(1, weight=8)
         self._user_frame.grid(column=1, row=1, sticky="nsew")
         _usr_scrollbar = tk.Scrollbar(self._user_frame, orient="vertical", bg="black")  # To navigate through users.
         _usr_scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
@@ -100,8 +123,10 @@ class Client:
 
         self.top.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        #----Now comes the sockets part----
+        self.top.mainloop()  # Starts GUI execution.
 
+    #----Now comes the sockets part----
+    def client(self):
         HOST = input('Enter host: ')
         PORT = input('Enter port: ')
         if not PORT:
@@ -117,8 +142,41 @@ class Client:
         self.receive_thread = Thread(target=self.receive)
         self.receive_thread.start()
 
-        self.top.mainloop()  # Starts GUI execution.
+    def servercmd(self, cmd):
+        if cmd == "start" and self.srvrunning is False:
+            _gui = Servergui()
+            self.srvrunning = True
+            self.server = network.Server(self.config)
+            srvthread = Thread(target=self.server.run(_gui))
+            srvthread.start()
 
+        elif cmd == "stop" and self.srvrunning is True:
+            self.srvrunning = False
+            self.server.server.close()
+
+        elif cmd == "restart" and self.srvrunning is True:
+            self.servercmd("stop")
+            self.servercmd("start")
+
+
+class Servergui:
+    def __init__(self):
+        self.root = None
+        self.frame = None
+        self.log = None
+
+    def load(self):
+        self.root = tk.Tk()
+        self.root.title("Server Log")
+        self.root.geometry("100x100")
+        self.frame = tk.Frame(self.root)
+        self.frame.pack()
+        _scrollbar = tk.Scrollbar(self.root, orient="vertical", bg="black")  # To navigate through users.
+        _scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
+        self.log = tk.Listbox(self.frame, yscrollcommand=_scrollbar.set, bd=2, bg="black", fg="white")
+        self.log.pack(expand=True, fill=tk.Y)
+        _scrollbar.config(command=self.log.yview)
+        #self.root.mainloop()
 
 # TODO: Implement settings window.
 class Settings:

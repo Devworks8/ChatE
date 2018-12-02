@@ -8,6 +8,7 @@ Updated: 28/11/2018
 
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
+import tkinter as tk
 
 
 class Server:
@@ -22,6 +23,7 @@ class Server:
         self.clients = {}
         self.addresses = {}
         self.server = None
+        self.gui = None
 
     def accept_incoming_connections(self):
         """
@@ -30,7 +32,8 @@ class Server:
         """
         while True:
             client, client_address = self.server.accept()
-            print("%s:%s has connected." % client_address)
+            self.gui.log.insert(tk.END, "%s:%s has connected." % client_address)
+            #print("%s:%s has connected." % client_address)
             client.send(bytes("Welcome to the Cave!", self.config.encoding))
             client.send(bytes("Enter alias.", self.config.encoding))
             self.addresses[client] = client_address
@@ -69,17 +72,19 @@ class Server:
         for sock in self.clients:
             sock.send(bytes(prefix, self.config.encoding) + msg)
 
-    def run(self, kill=False):
+    def run(self, gui, kill=False):
+        self.gui = gui
+        self.gui.load()
         self.ip_address = self.config.host
         self.port = self.config.port
         self.server = socket(AF_INET, SOCK_STREAM)
         self.server.bind((self.ip_address, self.port))
         self.server.listen(self.config.max_connections)
-        print("Waiting for connection...")
+        self.gui.log.insert(tk.END, "%Waiting for connection...")
         ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
         ACCEPT_THREAD.start()
+        self.gui.root.mainloop()
         ACCEPT_THREAD.join()
-        self.server.close()
 
 
 

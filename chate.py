@@ -21,16 +21,10 @@ class ChatE:
         self.config = parser.Config()
         self.client = gui.Client(self.config)
 
-    def run(self, server=False):
-        if not server:
-            pass
-            self.client.load(__VERSION__)
-        else:
-            server = network.Server(self.config)
-            server.run()
+    def run(self):
+        self.client.load(__VERSION__)
 
 
 if __name__ == '__main__':
     chatE = ChatE()
-    #chatE.run(server=True)
-    chatE.run(server=False)
+    chatE.run()
